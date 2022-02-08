@@ -34,7 +34,7 @@ class HyperLogLog:
 
         for user in self.dict_dataset:
             hll_sketch = [0] * self.size
-            flag = math.floor(math.log2(self.size))
+            flag = math.ceil(math.log2(self.size))
 
             for item in self.dict_dataset[user]:
                 item_trans = mmh3.hash(str(item), signed=False, seed=self.seed)
@@ -46,10 +46,10 @@ class HyperLogLog:
 
     def compute_index_value(self, item, flag):
         binary_item = '0' * (32 - len(bin(item)[2:])) + bin(item)[2:]
-        index = int(binary_item[0:flag], 2)
+        index = int(binary_item[0:flag], 2) % self.size
         value = 0
         for bit in binary_item[flag:]:
-            if bit == 0:
+            if bit == '0':
                 value += 1
             else:
                 break
@@ -83,15 +83,15 @@ class HyperLogLog:
             cardinality_B = self.estimate_cardinality(hll_sketch_B)
             cardinality_union = self.estimate_cardinality(hll_sketch_merge)
 
-            estimated_difference = 2 * cardinality_union - cardinality_A - cardinality_B
+            estimated_difference = abs(2 * cardinality_union - cardinality_A - cardinality_B)
             actual_difference = compute_difference(lst_A, lst_B)
             lst_result.append([actual_difference, estimated_difference])
-
-            print(actual_difference, estimated_difference)
 
         foutput = open(os.path.join(self.output, 'hll_' + str(self.seed) + '.out'), 'wb')
         pickle.dump(lst_result, foutput)
         foutput.close()
+
+        return lst_result
 
     def estimate_cardinality(self, hll_sketch):
         zero_bits = 0
@@ -103,6 +103,9 @@ class HyperLogLog:
             if hll_sketch[i] == 0:
                 zero_bits += 1
         cardinality = alpha * (self.size ** 2) / tmp
+
+        if zero_bits == 0:
+            zero_bits = 1
 
         if cardinality < 2.5 * self.size:
             cardinality = -self.size * math.log(zero_bits / self.size)

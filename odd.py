@@ -61,12 +61,15 @@ class Odd:
             for j in range(self.size):
                 one_bits += (odd_sketch_A[j] ^ odd_sketch_B[j])
 
+            if one_bits >= self.size / 2:
+                one_bits = self.size / 2 - 1
+
             estimated_difference = math.log(1 - 2 * one_bits / self.size) / math.log(1 - 2 / self.size)
             actual_difference = compute_difference(lst_A, lst_B)
             lst_result.append([actual_difference, estimated_difference])
 
-            print(actual_difference, estimated_difference)
-
         foutput = open(os.path.join(self.output, 'odd_' + str(self.seed) + '.out'), 'wb')
         pickle.dump(lst_result, foutput)
         foutput.close()
+
+        return lst_result

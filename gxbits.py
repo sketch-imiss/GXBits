@@ -30,15 +30,15 @@ class GXBits:
         :output format: [actual set difference, estimated set difference]
     """
 
-    def __init__(self, dict_dataset, size, probability, block_truncated, num_bits, num_iterations, error, output, seed):
+    def __init__(self, dict_dataset, size, probability, block_truncated, num_bits, error, rate, output, seed):
         self.dict_dataset = dict_dataset
         self.size = size
         self.probability = probability
         self.block_truncated = block_truncated
         self.num_bits = num_bits
         self.num_segments = math.ceil(size / num_bits)
-        self.num_iterations = num_iterations
         self.error = error
+        self.rate = rate
         self.output = output
         self.seed = seed
 
@@ -98,27 +98,28 @@ class GXBits:
                 one_bits += gxbits_sketch_A[j] ^ gxbits_sketch_B[j]
             zero_ratio /= self.size
 
+            if one_bits >= self.size / 2:
+                one_bits = self.size / 2 - 1
+
             initial_difference = math.log(1 - 2 * one_bits / self.size) / math.log(1 - 2 / self.size)
             estimated_difference = self.newton_raphson(initial_difference, zero_ratio)
             actual_difference = compute_difference(lst_A, lst_B)
 
             lst_result.append([actual_difference, estimated_difference])
 
-            print(actual_difference, estimated_difference)
-
         foutput = open(os.path.join(self.output, 'gxbits_' + str(self.seed) + '.out'), 'wb')
         pickle.dump(lst_result, foutput)
         foutput.close()
+
+        return lst_result
 
     def newton_raphson(self, initial_difference, zero_ratio):
         estimated_difference = initial_difference
         raw_function, first_derivative, second_derivative = self.compute_function_derivative(estimated_difference)
 
-        iteration = 0
-        while abs(raw_function - zero_ratio) > self.error and iteration < self.num_iterations:
-            estimated_difference -= first_derivative / second_derivative
+        while abs(first_derivative) > self.error and abs(raw_function - zero_ratio) > self.error:
+            estimated_difference -= self.rate * first_derivative / second_derivative
             raw_function, first_derivative, second_derivative = self.compute_function_derivative(estimated_difference)
-            iteration += 1
 
         return estimated_difference
 
@@ -141,11 +142,11 @@ class GXBits:
 
         for i in range(self.size):
             probability = self.compute_probability(i)
-            raw_function += (1 + (1 - 2 * probability) ** estimated_difference) / 2
+            raw_function += 1 + (1 - 2 * probability) ** estimated_difference
             first_derivative += math.log(1 - 2 * probability) * (1 - 2 * probability) ** estimated_difference
             second_derivative += (math.log(1 - 2 * probability) ** 2) * (1 - 2 * probability) ** estimated_difference
 
-        raw_function /= self.size
+        raw_function /= (2 * self.size)
         first_derivative /= (2 * self.size)
         second_derivative /= (2 * self.size)
 

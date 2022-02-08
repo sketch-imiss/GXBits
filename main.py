@@ -6,6 +6,7 @@ from odd import Odd
 from tow import TOW
 from hll import HyperLogLog
 from gxbits import GXBits
+from utils import *
 
 
 def get_args():
@@ -29,10 +30,10 @@ def get_args():
     # gxbits sketch
     parser.add_argument('--gxbits_size', default=1000, type=int, help='size of gxbits sketch')
     parser.add_argument('--probability', default=0.15, type=float, help='parameter of geometric distribution')
-    parser.add_argument('--block_truncated', default=0, type=int, help='whether gxbits sketch is block truncated or not')
+    parser.add_argument('--block_truncated', default=0, type=int, help='whether gxbits sketch is block-truncated or not')
     parser.add_argument('--num_bits', default=2, type=int, help='the number of bits in each segment')
-    parser.add_argument('--num_iterations', default=100, type=int, help='the number of iterations for newton-raphson method')
-    parser.add_argument('--exp_error', default=0.001, type=float, help='expected error for early stopping')
+    parser.add_argument('--exp_error', default=0.01, type=float, help='expected error for early stopping')
+    parser.add_argument('--rate', default=0.01, type=float, help='iteration rate for newton-raphson method')
 
     args = parser.parse_args()
     return args
@@ -40,6 +41,8 @@ def get_args():
 
 args = get_args()
 exp_rounds = args.exp_rounds
+lst_all_results = list()
+
 for r in range(exp_rounds):
     dataloader = Dataloader(args.dataset, args.intersection, args.difference, r)
     dict_dataset = dataloader.load_dataset()
@@ -47,19 +50,30 @@ for r in range(exp_rounds):
     if args.method == 'odd':
         odd = Odd(dict_dataset, args.odd_size, args.output, r)
         odd.build_sketch()
-        odd.estimate_difference()
+        lst_result = odd.estimate_difference()
+        lst_all_results.extend(lst_result)
     elif args.method == 'tow':
         tow = TOW(dict_dataset, args.tow_size, args.output, r)
         tow.build_sketch()
-        tow.estimate_difference()
+        lst_result = tow.estimate_difference()
+        lst_all_results.extend(lst_result)
     elif args.method == 'hll':
         hll = HyperLogLog(dict_dataset, args.hll_size, args.output, r)
         hll.build_sketch()
-        hll.estimate_difference()
+        lst_result = hll.estimate_difference()
+        lst_all_results.extend(lst_result)
     elif args.method == 'gxbits':
         gxbits = GXBits(dict_dataset, args.gxbits_size, args.probability, args.block_truncated, args.num_bits,
-                        args.num_iterations, args.exp_error, args.output, r)
+                        args.exp_error, args.rate, args.output, r)
         gxbits.build_sketch()
-        gxbits.estimate_difference()
+        lst_result = gxbits.estimate_difference()
+        lst_all_results.extend(lst_result)
     else:
         logging.error('Please input the correct method name: odd/tow/hll/gxbits')
+
+if args.dataset == 'synthetic':
+    rse = compute_rse(lst_all_results)
+    print(rse)
+else:
+    aare = compute_aare(lst_all_results)
+    print(aare)

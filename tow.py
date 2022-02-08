@@ -68,8 +68,8 @@ class TOW:
 
             lst_result.append([actual_difference, estimated_difference])
 
-            print(actual_difference, estimated_difference)
-
         foutput = open(os.path.join(self.output, 'tow_' + str(self.seed) + '.out'), 'wb')
         pickle.dump(lst_result, foutput)
         foutput.close()
+
+        return lst_result
