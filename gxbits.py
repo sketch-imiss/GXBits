@@ -115,11 +115,11 @@ class GXBits:
 
     def newton_raphson(self, initial_difference, zero_ratio):
         estimated_difference = initial_difference
-        raw_function, first_derivative, second_derivative = self.compute_function_derivative(estimated_difference)
+        raw_function, first_derivative = self.compute_function_derivative(estimated_difference, zero_ratio)
 
-        while abs(first_derivative) > self.error and abs(raw_function - zero_ratio) > self.error:
-            estimated_difference -= self.rate * first_derivative / second_derivative
-            raw_function, first_derivative, second_derivative = self.compute_function_derivative(estimated_difference)
+        while abs(first_derivative) > self.error:
+            estimated_difference -= self.rate * raw_function / first_derivative
+            raw_function, first_derivative = self.compute_function_derivative(estimated_difference, zero_ratio)
 
         return estimated_difference
 
@@ -135,7 +135,7 @@ class GXBits:
             elif self.num_bits * (self.num_segments - 1) <= index <= self.size - 1:
                 return (1 - self.probability) ** (self.num_segments - 1) / self.num_bits
 
-    def compute_function_derivative(self, estimated_difference):
+    def compute_function_derivative(self, estimated_difference, zero_ratio):
         raw_function = 0
         first_derivative = 0
         second_derivative = 0
@@ -144,10 +144,12 @@ class GXBits:
             probability = self.compute_probability(i)
             raw_function += 1 + (1 - 2 * probability) ** estimated_difference
             first_derivative += math.log(1 - 2 * probability) * (1 - 2 * probability) ** estimated_difference
-            second_derivative += (math.log(1 - 2 * probability) ** 2) * (1 - 2 * probability) ** estimated_difference
+            # second_derivative += (math.log(1 - 2 * probability) ** 2) * (1 - 2 * probability) ** estimated_difference
 
-        raw_function /= (2 * self.size)
+        raw_function = raw_function / (2 * self.size) - zero_ratio
         first_derivative /= (2 * self.size)
-        second_derivative /= (2 * self.size)
+        # second_derivative /= (2 * self.size)
 
-        return raw_function, first_derivative, second_derivative
+        # return raw_function, first_derivative, second_derivative
+        return raw_function, first_derivative
+
