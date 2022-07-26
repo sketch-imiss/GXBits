@@ -15,6 +15,7 @@ def get_args():
     parser.add_argument('--dataset', default='synthetic', type=str, help='dataset path or synthetic dataset')
     parser.add_argument('--intersection', default=100, type=int, help='set intersection cardinality')
     parser.add_argument('--difference', default=100, type=int, help='set difference cardinality')
+    parser.add_argument('--ratio', default=0.5, type=float, help='ratio used to control cardinalities of two sets')
     parser.add_argument('--exp_rounds', default=1, type=int, help='the number of experimental rounds')
     parser.add_argument('--output', default='result/', type=str, help='output directory')
 
@@ -44,8 +45,9 @@ exp_rounds = args.exp_rounds
 lst_all_results = list()
 
 for r in range(exp_rounds):
-    dataloader = Dataloader(args.dataset, args.intersection, args.difference, r)
+    dataloader = Dataloader(args.dataset, args.intersection, args.difference, args.ratio, r)
     dict_dataset = dataloader.load_dataset()
+    print('dataset generation finished!')
 
     if args.method == 'odd':
         odd = Odd(dict_dataset, args.odd_size, args.output, r)
